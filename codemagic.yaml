@@ -1,16 +1,17 @@
 # Codemagic's iOS native sample, set up with the FamTiVi Codemagic parameters (from famtivi_app):
-# Mac mini M2, Xcode 26.6, and FamTiVi's App Store signing for com.famtivi.app (team TXQ9L8UMDX).
-# Build only: there is deliberately no publishing section, so this sample never uploads to
-# FamTiVi's App Store Connect record or TestFlight.
+# Mac mini M2, Xcode 26.6, the "FamTiVi CI Key" App Store Connect integration and team TXQ9L8UMDX.
+# It has its own identity, com.famtivi.quickstart, and uploads to that app's TestFlight only.
 workflows:
   ios-native-quick-start:
     name: iOS Native
     max_build_duration: 60
     instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: FamTiVi CI Key
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.famtivi.app
+        bundle_identifier: com.famtivi.quickstart
       vars:
         XCODE_WORKSPACE: "swiftly.xcworkspace"
         XCODE_SCHEME: "swiftly"
@@ -21,11 +22,15 @@ workflows:
         script: pod install
       - name: Set up provisioning profiles settings on Xcode project
         script: xcode-project use-profiles
-      - name: Build ipa
+      - name: Build ipa (build number = Codemagic build number)
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --archive-xcargs "COMPILER_INDEX_STORE_ENABLE=NO CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration # internal TestFlight testers get the build once Apple finishes processing
